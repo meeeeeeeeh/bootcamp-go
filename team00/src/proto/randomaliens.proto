@@ -1,0 +1,18 @@
+syntax = "proto3";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "./../generated";
+
+service RandomaliensService {
+  rpc StreamFrequency(FrequencyIn) returns (stream FrequencyOut);
+}
+
+message FrequencyIn {
+  int64 client_id = 1;
+}
+
+message FrequencyOut{
+  string session_id = 1;
+  double frequency = 2;
+  google.protobuf.Timestamp dt = 3;
+}

@@ -1,0 +1,15 @@
+FROM golang:1.22.2-alpine AS builder
+
+WORKDIR /app
+
+# Копируем только go.mod и go.sum сначала, чтобы закэшировать зависимости
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Теперь копируем исходный код
+COPY . .
+
+COPY internal/config/elasticsearch/mapping.json internal/config/elasticsearch/data.csv ./internal/config/elasticsearch/
+
+# Собираем миграции
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o /app/migration ./cmd/migration/migration.go

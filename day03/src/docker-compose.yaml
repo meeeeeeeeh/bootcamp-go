@@ -1,0 +1,70 @@
+version: '3.8'
+services:
+
+
+  elasticsearch:
+    image: elasticsearch:8.14.0
+    environment:
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - xpack.security.enabled=false #отключение проверки пользователя
+      - xpack.security.http.ssl.enabled=false #отключение проверки сертификата
+    ports:
+      - "9200:9200"
+    networks:
+      - es-network
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+    deploy:
+      resources: #лимиты на память которую использует elasticsearch
+        limits:
+          cpus: '1.0'     # Ограничить контейнер до 1 CPU
+          memory: 1g      # Ограничить контейнер до 1 GB RAM
+        reservations:
+          memory: 512m    # Резервировать 512 MB RAM для контейнера
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      - elasticsearch
+    ports:
+      - "8080:8080"
+    networks:
+      - es-network
+    env_file:
+      - .env
+    environment:
+      - ELASTICSEARCH_USERNAME=${ELASTICSEARCH_USERNAME}
+      - ELASTICSEARCH_PASSWORD=${ELASTICSEARCH_PASSWORD}
+      - ELASTICSEARCH_ADDRESS=${ELASTICSEARCH_ADDRESS}
+      - JWT_SECRET=${JWT_SECRET}
+      - SERVER_ADDRESS=${SERVER_ADDRESS}
+
+  migration:
+    build:
+      context: .
+      dockerfile: Dockerfile.migration
+    depends_on:
+      - elasticsearch
+    networks:
+      - es-network
+    env_file:
+      - .env
+    environment:
+      - ELASTICSEARCH_USERNAME=${ELASTICSEARCH_USERNAME}
+      - ELASTICSEARCH_PASSWORD=${ELASTICSEARCH_PASSWORD}
+      - ELASTICSEARCH_ADDRESS=${ELASTICSEARCH_ADDRESS}
+      - JWT_SECRET=${JWT_SECRET}
+      - SERVER_ADDRESS=${SERVER_ADDRESS}
+    restart: "no"
+    command: ["/app/migration"]
+
+networks:
+  es-network:
+
+#создает именованный том для хранения данных эластиксерч вне контейнера чтобы при перезапуске они сохранились
+#docker-compose down --volumes - чтобы удалить тома контейнеров
+volumes:
+  esdata:
